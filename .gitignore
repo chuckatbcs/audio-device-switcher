@@ -1,0 +1,16 @@
+# Python Virtual Environment
+.venv/
+venv/
+ENV/
+
+# Python Cache & Bytecode
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local User Settings & Temp Files
+*settings.json
+audio-device-switcher-settings.json
+*.log
+nohup.out
+.DS_Store
