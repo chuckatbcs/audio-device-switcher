@@ -77,6 +77,45 @@ def make_source_callback(daemon_inst, source_name):
 def make_exclusion_callback(daemon_inst, device_name):
     return lambda icon_ref, it: daemon_inst.toggle_exclusion(device_name)
 
+def get_active_device_status(daemon_inst):
+    """
+    Returns display strings for the current default output and input.
+    output_label includes volume when available (e.g. 'Built-in Audio · 42%').
+    """
+    current_sink = daemon_inst.get_default_sink()
+    current_source = daemon_inst.get_default_source()
+    sinks = daemon_inst.query_sinks()
+    sources = daemon_inst.query_sources()
+
+    sink_desc = next(
+        (s.get("description", current_sink) for s in sinks if s["name"] == current_sink),
+        current_sink,
+    )
+    source_desc = next(
+        (s.get("description", current_source) for s in sources if s["name"] == current_source),
+        current_source,
+    )
+
+    output_label = sink_desc
+    vol_val = 0
+    for s in sinks:
+        if s["name"] != current_sink:
+            continue
+        vol_dict = s.get("volume", {})
+        if not vol_dict:
+            break
+        first_channel = list(vol_dict.values())[0]
+        val_pct = first_channel.get("value_percent", "")
+        if val_pct:
+            output_label = f"{sink_desc} · {val_pct}"
+            try:
+                vol_val = int(val_pct.strip("%"))
+            except ValueError:
+                vol_val = 0
+        break
+
+    return sink_desc, source_desc, output_label, vol_val
+
 def rebuild_menu(daemon_inst):
     """
     Dynamically constructs the tray menu structure based on current PipeWire state,
@@ -150,8 +189,15 @@ def rebuild_menu(daemon_inst):
         hist_items.append(item("  No events logged", lambda icon_ref, it: None, enabled=False))
     history_menu = Menu(*hist_items)
     history_submenu = item("Connection History", history_menu)
+
+    _, source_desc, output_label, _ = get_active_device_status(daemon_inst)
+    status_output = item(f"  {output_label}", lambda icon_ref, it: None, enabled=False)
+    status_input = item(f"  {source_desc}", lambda icon_ref, it: None, enabled=False)
     
     main_menu = Menu(
+        status_output,
+        status_input,
+        Menu.SEPARATOR,
         auto_switch_item,
         Menu.SEPARATOR,
         outputs_submenu,
@@ -179,34 +225,14 @@ def update_ui_state():
     else:
         icon.icon = inactive_img
 
-    # 3. Dynamic Tooltip and Notification Check
+    # 3. Tray title (hover where supported) and notification check
     try:
         current_sink = daemon.get_default_sink()
         current_source = daemon.get_default_source()
-        sinks = daemon.query_sinks()
-        sources = daemon.query_sources()
-        
-        sink_desc = next((s.get("description", current_sink) for s in sinks if s["name"] == current_sink), current_sink)
-        source_desc = next((s.get("description", current_source) for s in sources if s["name"] == current_source), current_source)
-        
-        # Extract volume level of default output
-        vol_val = 0
-        vol_str = ""
-        for s in sinks:
-            if s["name"] == current_sink:
-                vol_dict = s.get("volume", {})
-                if vol_dict:
-                    first_channel = list(vol_dict.values())[0]
-                    val_pct = first_channel.get("value_percent", "0%")
-                    vol_str = f" ({val_pct})"
-                    try:
-                        vol_val = int(val_pct.strip("%"))
-                    except ValueError:
-                        vol_val = 0
-                break
-                
-        # Set small panel icon hover tooltip dynamically
-        icon.title = f"Audio Switcher\nOutput: {sink_desc}{vol_str}\nInput: {source_desc}"
+        sink_desc, source_desc, output_label, vol_val = get_active_device_status(daemon)
+
+        # Single-line title for Wayland hosts that honor AppIndicator/SNI title
+        icon.title = output_label
         
         # Populate initial tracking states without notifying
         if last_default_sink is None:
@@ -278,7 +304,7 @@ def main():
         menu=rebuild_menu(daemon)
     )
     
-    # Set initial hover tooltip title
+    # Set initial tray title and menu status lines
     update_ui_state()
     
     # Start the PyStray event loop (runs on main thread)
