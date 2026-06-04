@@ -60,15 +60,15 @@ def update_ui_state():
 
     tray.set_menu()
 
-    if daemon.is_auto_switch_enabled():
-        tray.set_icon(active_img)
-    else:
-        tray.set_icon(inactive_img)
-
     try:
         current_sink = daemon.get_default_sink()
         current_source = daemon.get_default_source()
         sink_desc, source_desc, output_label, vol_val = get_active_device_status(daemon)
+        badge = f"{vol_val}%" if vol_val else None
+        if daemon.is_auto_switch_enabled():
+            tray.set_icon(generate_speaker_icon(active=True, badge=badge))
+        else:
+            tray.set_icon(generate_speaker_icon(active=False, badge=badge))
         title, subtitle = get_tooltip_strings(daemon)
 
         tray.set_tooltip(title, subtitle)

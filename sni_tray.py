@@ -22,6 +22,8 @@ import dbus.service
 from dbus.mainloop.glib import DBusGMainLoop
 
 from menu_builder import build_gtk_menu
+from panel_hover import PanelHoverTracker
+from tray_popup import attach_tray_popup
 
 WATCHER_IFACE = "org.kde.StatusNotifierWatcher"
 
@@ -143,7 +145,8 @@ class _StatusNotifierItem(dbus.service.Object):
 
     @dbus.service.method(SNI_IFACE, in_signature="ii")
     def Activate(self, x, y):
-        pass
+        if self._popup_cb:
+            self._popup_cb(self._title, self._subtitle, x, y)
 
     @dbus.service.method(SNI_IFACE, in_signature="ii")
     def SecondaryActivate(self, x, y):
@@ -169,6 +172,10 @@ class SNITray:
         self.quit_callback = quit_callback
         self.status_popup = status_popup
         self._current_pil = active_image
+        self._status_title = ""
+        self._status_subtitle = ""
+        self._hover_tracker = PanelHoverTracker(lambda x=-1, y=-1: None, lambda: None)
+        attach_tray_popup(self)
         self._bus = None
         self._service_name = f"org.kde.StatusNotifierItem-{os.getpid()}-1"
         self._item = None
@@ -186,6 +193,8 @@ class SNITray:
             self._item.set_pixmaps(pil_to_dbus_pixmaps(pil_image))
 
     def set_tooltip(self, title, subtitle=""):
+        self._status_title = title or ""
+        self._status_subtitle = subtitle or ""
         if self._item:
             self._item.set_text(title, subtitle)
 
@@ -193,7 +202,7 @@ class SNITray:
         for child in list(self._menu.get_children()):
             self._menu.remove(child)
             child.destroy()
-        gtk_menu = build_gtk_menu(self.daemon, self.quit_callback)
+        gtk_menu = build_gtk_menu(self.daemon, self.quit_callback, tray=self)
         for child in list(gtk_menu.get_children()):
             gtk_menu.remove(child)
             self._menu.append(child)
@@ -218,9 +227,11 @@ class SNITray:
         self._register_with_watcher()
         self.set_icon(self._current_pil)
         self.set_menu()
+        self._hover_tracker.start()
         Gtk.main()
 
     def stop(self):
+        self._hover_tracker.stop()
         Gtk.main_quit()
 
 

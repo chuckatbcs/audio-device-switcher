@@ -18,7 +18,9 @@ from gi.repository import Gtk, GLib, GdkPixbuf
 AppIndicator = gi.module.get_introspection_module(APPIND)
 
 from menu_builder import build_gtk_menu
+from panel_hover import PanelHoverTracker
 from sni_tooltip import SNITooltipManager
+from tray_popup import attach_tray_popup
 
 
 class GtkAppIndicatorTray:
@@ -36,6 +38,13 @@ class GtkAppIndicatorTray:
         self._icon_path = None
         self._tooltip = SNITooltipManager(self.APP_ID)
         self._current_pil = active_image
+        self._status_title = ""
+        self._status_subtitle = ""
+        self._hover_tracker = PanelHoverTracker(
+            lambda x=-1, y=-1: None,
+            lambda: None,
+        )
+        attach_tray_popup(self)
 
     def _write_icon(self, pil_image):
         if self._icon_path is None:
@@ -52,6 +61,8 @@ class GtkAppIndicatorTray:
         self._indicator.set_icon_full(path, self.APP_ID)
 
     def set_tooltip(self, title, subtitle=""):
+        self._status_title = title or ""
+        self._status_subtitle = subtitle or ""
         if self._indicator:
             self._indicator.set_title(title or self.APP_ID)
         self._tooltip.update(title, subtitle)
@@ -59,7 +70,7 @@ class GtkAppIndicatorTray:
     def set_menu(self):
         if not self._indicator:
             return
-        menu = build_gtk_menu(self.daemon, self.quit_callback)
+        menu = build_gtk_menu(self.daemon, self.quit_callback, tray=self)
         self._indicator.set_menu(menu)
 
     def start(self):
@@ -71,8 +82,10 @@ class GtkAppIndicatorTray:
         self._indicator.set_status(AppIndicator.IndicatorStatus.ACTIVE)
         self.set_icon(self._current_pil)
         self.set_menu()
+        self._hover_tracker.start()
         Gtk.main()
 
     def stop(self):
+        self._hover_tracker.stop()
         self._tooltip.stop()
         Gtk.main_quit()

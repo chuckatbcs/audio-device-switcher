@@ -12,7 +12,7 @@ def _gtk_separator():
     return Gtk.SeparatorMenuItem()
 
 
-def build_gtk_menu(daemon_inst, quit_callback):
+def build_gtk_menu(daemon_inst, quit_callback, tray=None):
     """Build a Gtk.Menu mirroring the pystray menu structure."""
     menu = Gtk.Menu()
 
@@ -115,6 +115,11 @@ def build_gtk_menu(daemon_inst, quit_callback):
     exit_item = Gtk.MenuItem(label="Exit Switcher")
     exit_item.connect("activate", lambda *_: quit_callback())
     menu.append(exit_item)
+
+    if tray is not None:
+        from tray_popup import on_menu_show, on_menu_hide
+        menu.connect("show", lambda *_: on_menu_show(tray))
+        menu.connect("hide", lambda *_: on_menu_hide(tray))
 
     menu.show_all()
     return menu

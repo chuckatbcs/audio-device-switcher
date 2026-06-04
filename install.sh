@@ -116,7 +116,7 @@ cp "$SCRIPT_DIR/applet.py" "$DEPLOY_DIR/"
 cp "$SCRIPT_DIR/daemon.py" "$DEPLOY_DIR/"
 cp "$SCRIPT_DIR/icon_generator.py" "$DEPLOY_DIR/"
 cp "$SCRIPT_DIR/cycle.py" "$DEPLOY_DIR/"
-for mod in audio_state.py menu_builder.py gtk_tray.py sni_tray.py sni_tooltip.py status_popup.py pystray_tray.py tray_factory.py; do
+for mod in audio_state.py menu_builder.py gtk_tray.py sni_tray.py sni_tooltip.py status_popup.py pystray_tray.py tray_factory.py panel_hover.py; do
     cp "$SCRIPT_DIR/$mod" "$DEPLOY_DIR/"
 done
 

@@ -24,7 +24,9 @@ class StatusPopup:
         self._window.set_resizable(False)
         self._window.set_skip_taskbar_hint(True)
         self._window.set_skip_pager_hint(True)
-        self._window.set_type_hint(Gdk.WindowTypeHint.NOTIFICATION)
+        self._window.set_type_hint(Gdk.WindowTypeHint.TOOLTIP)
+        self._window.set_accept_focus(False)
+        self._window.set_keep_above(True)
 
         frame = Gtk.Frame()
         frame.set_shadow_type(Gtk.ShadowType.OUT)
@@ -75,10 +77,15 @@ class StatusPopup:
 
         self._hide_source = GLib.timeout_add(timeout_ms, _hide)
 
-    def destroy(self):
+    def hide(self):
         if self._hide_source is not None:
             GLib.source_remove(self._hide_source)
             self._hide_source = None
+        if self._window is not None:
+            self._window.hide()
+
+    def destroy(self):
+        self.hide()
         if self._window is not None:
             self._window.destroy()
             self._window = None

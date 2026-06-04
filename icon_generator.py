@@ -1,6 +1,6 @@
 from PIL import Image, ImageDraw
 
-def generate_speaker_icon(active=True):
+def generate_speaker_icon(active=True, badge=None):
     """
     Procedurally draws a beautiful, high-contrast, minimalist speaker icon.
     - active=True: Draws glowing blue/violet soundwaves and a vibrant indicator dot.
@@ -51,7 +51,14 @@ def generate_speaker_icon(active=True):
     # Add a subtle inner white dot for active state to make it look premium
     if active:
         draw.ellipse([46, 14, 50, 18], fill=(255, 255, 255, 255))
-        
+
+    if badge:
+        label = str(badge)[:5]
+        tw = 8 * len(label) + 8
+        tx0, ty0 = max(2, 32 - tw // 2), 48
+        draw.rounded_rectangle([tx0, ty0, tx0 + tw, 58], radius=4, fill=(30, 30, 30, 220))
+        draw.text((tx0 + 4, ty0 - 1), label, fill=(243, 244, 246, 255))
+
     return image
 
 if __name__ == '__main__':
