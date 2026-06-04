@@ -1,12 +1,12 @@
 #!/bin/bash
 # Pull latest code, reinstall to ~/.local/share, and print status.
 # Usage: ./update.sh [git-ref]
-# Example: ./update.sh cursor/tray-active-device-status-b1e7
+# Example: ./update.sh main
 
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-REF="${1:-cursor/tray-active-device-status-b1e7}"
+REF="${1:-main}"
 
 cd "$SCRIPT_DIR"
 

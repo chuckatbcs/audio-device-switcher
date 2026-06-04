@@ -9,6 +9,12 @@ AUTOSTART_FILE="${HOME}/.config/autostart/${APP_NAME}.desktop"
 SETTINGS_FILE="${HOME}/audio-device-switcher-settings.json"
 WORKSPACE_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
+if [ -x /usr/bin/python3 ]; then
+    STATUS_PYTHON=/usr/bin/python3
+else
+    STATUS_PYTHON=$(command -v python3 || echo "")
+fi
+
 echo "================================================"
 echo "Audio Device Switcher — status"
 echo "================================================"
@@ -72,11 +78,11 @@ for cmd in python3 pactl; do
         echo "✗ $cmd not found"
     fi
 done
-python3 -c "import gi; gi.require_version('Gtk','3.0'); from gi.repository import Gtk; print('✓ python3-gi / Gtk')" 2>/dev/null || echo "✗ python3-gi or Gtk unavailable"
-python3 -c "import gi; gi.require_version('Notify','0.7')" 2>/dev/null && echo "✓ gir1.2-notify-0.7" || echo "✗ gir1.2-notify-0.7 not available"
-if python3 -c "import gi; gi.require_version('AyatanaAppIndicator3','0.1')" 2>/dev/null; then
+"$STATUS_PYTHON" -c "import gi; gi.require_version('Gtk','3.0'); from gi.repository import Gtk; print('✓ python3-gi / Gtk')" 2>/dev/null || echo "✗ python3-gi or Gtk unavailable"
+"$STATUS_PYTHON" -c "import gi; gi.require_version('Notify','0.7')" 2>/dev/null && echo "✓ gir1.2-notify-0.7" || echo "✗ gir1.2-notify-0.7 not available"
+if "$STATUS_PYTHON" -c "import gi; gi.require_version('AyatanaAppIndicator3','0.1')" 2>/dev/null; then
     echo "✓ AyatanaAppIndicator3"
-elif python3 -c "import gi; gi.require_version('AppIndicator3','0.1')" 2>/dev/null; then
+elif "$STATUS_PYTHON" -c "import gi; gi.require_version('AppIndicator3','0.1')" 2>/dev/null; then
     echo "✓ AppIndicator3"
 else
     echo "✗ AppIndicator typelib not available"

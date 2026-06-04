@@ -10,15 +10,26 @@ DEPLOY_DIR="$HOME/.local/share/$APP_NAME"
 AUTOSTART_DIR="$HOME/.config/autostart"
 DESKTOP_FILE="$AUTOSTART_DIR/$APP_NAME.desktop"
 
+# Tray applet needs system PyGObject/GTK typelibs — not Conda's python3 on PATH.
+if [ -x /usr/bin/python3 ]; then
+    PYTHON3=/usr/bin/python3
+elif command -v python3 &>/dev/null; then
+    PYTHON3=$(command -v python3)
+    echo "WARNING: Using $PYTHON3 — if dependency checks fail, run: conda deactivate"
+else
+    PYTHON3=""
+fi
+
 echo "================================================"
 echo "Installing Audio Device Switcher Tray Applet..."
 echo "================================================"
+echo "Python: ${PYTHON3:-not found}"
 
 # 1. Dependency Checks
 echo "[1/6] Checking system dependencies..."
 MISSING_DEPS=0
 
-if ! command -v python3 &>/dev/null; then
+if [ -z "$PYTHON3" ]; then
     echo "ERROR: python3 is not installed."
     MISSING_DEPS=1
 fi
@@ -29,20 +40,21 @@ if ! command -v pactl &>/dev/null; then
 fi
 
 # Check for python3-venv by trying to run venv module
-if ! python3 -c "import venv" &>/dev/null; then
+if ! "$PYTHON3" -c "import venv" &>/dev/null; then
     echo "ERROR: python3-venv is not installed."
     echo "Please install it by running: sudo apt install python3-venv"
     MISSING_DEPS=1
 fi
 
 # Check for python3-gi (PyGObject) which is standard on Pop!_OS
-if ! python3 -c "import gi" &>/dev/null; then
+if ! "$PYTHON3" -c "import gi" &>/dev/null; then
     echo "ERROR: python3-gi (PyGObject) is not installed."
-    echo "Please install it by running: sudo apt install python3-gi"
+    echo "Install system packages (Conda python cannot use apt GI bindings):"
+    echo "  sudo apt install python3-gi python3-venv gir1.2-notify-0.7 gir1.2-ayatanaappindicator3-0.1"
     MISSING_DEPS=1
 fi
 
-if ! python3 -c "import gi; gi.require_version('Notify', '0.7')" &>/dev/null; then
+if ! "$PYTHON3" -c "import gi; gi.require_version('Notify', '0.7')" &>/dev/null; then
     echo "ERROR: gir1.2-notify-0.7 is not installed (required for desktop notifications)."
     echo "Please install it by running: sudo apt install gir1.2-notify-0.7"
     MISSING_DEPS=1
@@ -59,9 +71,9 @@ echo "✓ System core dependencies verified."
 # directly to the Wayland-native COSMIC Notification Tray.
 echo "Checking for native Wayland AppIndicator libraries..."
 HAS_APPIND=0
-if python3 -c "import gi; gi.require_version('AyatanaAppIndicator3', '0.1')" &>/dev/null; then
+if "$PYTHON3" -c "import gi; gi.require_version('AyatanaAppIndicator3', '0.1')" &>/dev/null; then
     HAS_APPIND=1
-elif python3 -c "import gi; gi.require_version('AppIndicator3', '0.1')" &>/dev/null; then
+elif "$PYTHON3" -c "import gi; gi.require_version('AppIndicator3', '0.1')" &>/dev/null; then
     HAS_APPIND=1
 fi
 
@@ -105,7 +117,7 @@ echo "✓ Scripts deployed successfully."
 # 5. Virtual Environment Configuration
 echo "[4/6] Creating isolated sandboxed environment with system package links..."
 # Create a venv that can access the host system's GObject/GTK/AppIndicator libraries (essential for Wayland compatibility)
-python3 -m venv --system-site-packages "$DEPLOY_DIR/.venv"
+"$PYTHON3" -m venv --system-site-packages "$DEPLOY_DIR/.venv"
 echo "✓ Virtual environment created."
 
 # 6. Dependency Installation
@@ -164,7 +176,7 @@ echo "✓ CLI Command 'audio-device-cycle' registered in ~/.local/bin/"
 
 # 7.5. Automated Keyboard Shortcut Configuration (Super + Z / Windows + Z)
 echo "Registering global keyboard shortcut (Super + Z) to cycle audio devices..."
-python3 -c '
+"$PYTHON3" -c '
 import os, subprocess
 home_dir = os.path.expanduser("~")
 target_cmd = os.path.join(home_dir, ".local/bin/audio-device-cycle")
