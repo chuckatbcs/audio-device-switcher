@@ -42,6 +42,12 @@ if ! python3 -c "import gi" &>/dev/null; then
     MISSING_DEPS=1
 fi
 
+if ! python3 -c "import gi; gi.require_version('Notify', '0.7')" &>/dev/null; then
+    echo "ERROR: gir1.2-notify-0.7 is not installed (required for desktop notifications)."
+    echo "Please install it by running: sudo apt install gir1.2-notify-0.7"
+    MISSING_DEPS=1
+fi
+
 if [ $MISSING_DEPS -eq 1 ]; then
     echo "Installation aborted due to missing dependencies."
     exit 1
