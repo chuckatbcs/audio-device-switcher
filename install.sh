@@ -60,6 +60,17 @@ if ! "$PYTHON3" -c "import gi; gi.require_version('Notify', '0.7')" &>/dev/null;
     MISSING_DEPS=1
 fi
 
+if ! "$PYTHON3" -c "import dbus" &>/dev/null; then
+    echo "ERROR: python3-dbus is not installed (required for native tray tooltips)."
+    echo "Please install it by running: sudo apt install python3-dbus"
+    MISSING_DEPS=1
+fi
+
+if ! "$PYTHON3" -c "import gi; gi.require_version('DbusmenuGtk3', '0.4')" &>/dev/null; then
+    echo "NOTICE: gir1.2-dbusmenu-gtk3-0.4 not found — native SNI tray will fall back to AppIndicator."
+    echo "Install for best hover support: sudo apt install gir1.2-dbusmenu-gtk3-0.4"
+fi
+
 if [ $MISSING_DEPS -eq 1 ]; then
     echo "Installation aborted due to missing dependencies."
     exit 1
@@ -105,6 +116,9 @@ cp "$SCRIPT_DIR/applet.py" "$DEPLOY_DIR/"
 cp "$SCRIPT_DIR/daemon.py" "$DEPLOY_DIR/"
 cp "$SCRIPT_DIR/icon_generator.py" "$DEPLOY_DIR/"
 cp "$SCRIPT_DIR/cycle.py" "$DEPLOY_DIR/"
+for mod in audio_state.py menu_builder.py gtk_tray.py sni_tray.py sni_tooltip.py status_popup.py pystray_tray.py tray_factory.py; do
+    cp "$SCRIPT_DIR/$mod" "$DEPLOY_DIR/"
+done
 
 # If settings.json exists locally, copy it, otherwise daemon will generate it
 if [ -f "$SCRIPT_DIR/settings.json" ]; then
