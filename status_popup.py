@@ -3,6 +3,7 @@
 import gi
 
 gi.require_version("Gtk", "3.0")
+gi.require_version("Gdk", "3.0")
 from gi.repository import Gtk, Gdk, GLib
 
 
@@ -48,6 +49,28 @@ class StatusPopup:
         frame.add(box)
         self._window.add(frame)
 
+    def _position_near_pointer(self, x, y):
+        display = Gdk.Display.get_default()
+        if display is None:
+            return max(0, x), max(0, y + 16)
+
+        monitor = display.get_monitor_at_point(x, y)
+        if monitor is None:
+            return max(0, x - 20), max(0, y + 16)
+
+        geom = monitor.get_geometry()
+        self._window.show_all()
+        _, _, win_w, win_h = self._window.get_size()
+
+        pos_x = max(geom.x, min(x - 20, geom.x + geom.width - win_w - 4))
+        near_top = y <= geom.y + 72
+        if near_top:
+            pos_y = min(geom.y + geom.height - win_h - 4, y + 24)
+        else:
+            pos_y = max(geom.y + 4, y - win_h - 8)
+
+        return pos_x, pos_y
+
     def show_at(self, title, subtitle, x=-1, y=-1, timeout_ms=2500):
         """Show popup near (x, y) or at the current pointer."""
         self._ensure_window()
@@ -63,10 +86,9 @@ class StatusPopup:
             seat = display.get_default_seat()
             device = seat.get_pointer()
             _, x, y = device.get_position()
-            x = max(0, x - 20)
-            y = max(0, y + 16)
 
-        self._window.move(x, y)
+        pos_x, pos_y = self._position_near_pointer(x, y)
+        self._window.move(pos_x, pos_y)
         self._window.show_all()
 
         def _hide():

@@ -2,7 +2,7 @@
 
 
 def attach_tray_popup(tray):
-    """Wire menu-open and hover-tracker callbacks on a tray instance."""
+    """Wire menu-open, dbus-menu, and hover-tracker callbacks on a tray instance."""
     popup = getattr(tray, "status_popup", None)
     if popup is None:
         return
@@ -24,9 +24,16 @@ def attach_tray_popup(tray):
         tracker._show = lambda x=-1, y=-1: show_at_pointer(x, y)
         tracker._hide = hide_popup
 
+    detector = getattr(tray, "_menu_detector", None)
+    if detector is not None:
+        def on_remote_menu_open():
+            on_menu_show(tray)
+
+        detector._callback = on_remote_menu_open
+
 
 def on_menu_show(tray):
-    """Invoke when the tray menu becomes visible."""
+    """Invoke when the tray menu becomes visible (local Gtk or remote DBusMenu)."""
     tracker = getattr(tray, "_hover_tracker", None)
     if tracker is not None:
         tracker.note_menu_opened()

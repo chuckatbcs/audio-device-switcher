@@ -14,12 +14,15 @@ except ValueError:
     APPIND = "AppIndicator3"
 
 from gi.repository import Gtk, GLib, GdkPixbuf
+from dbus.mainloop.glib import DBusGMainLoop
 
 AppIndicator = gi.module.get_introspection_module(APPIND)
 
 from menu_builder import build_gtk_menu
+from menu_open_detector import MenuOpenDetector
 from panel_hover import PanelHoverTracker
 from sni_tooltip import SNITooltipManager
+from tray_log import tray_log
 from tray_popup import attach_tray_popup
 
 
@@ -43,7 +46,9 @@ class GtkAppIndicatorTray:
         self._hover_tracker = PanelHoverTracker(
             lambda x=-1, y=-1: None,
             lambda: None,
+            log=tray_log,
         )
+        self._menu_detector = MenuOpenDetector(lambda: None, log=tray_log)
         attach_tray_popup(self)
 
     def _write_icon(self, pil_image):
@@ -74,6 +79,8 @@ class GtkAppIndicatorTray:
         self._indicator.set_menu(menu)
 
     def start(self):
+        tray_log("Tray backend: Ayatana AppIndicator (Pop!_OS / Ubuntu path)")
+        DBusGMainLoop(set_as_default=True)
         self._indicator = AppIndicator.Indicator.new(
             self.APP_ID,
             "audio-headphones",
@@ -82,10 +89,12 @@ class GtkAppIndicatorTray:
         self._indicator.set_status(AppIndicator.IndicatorStatus.ACTIVE)
         self.set_icon(self._current_pil)
         self.set_menu()
+        self._menu_detector.start(app_id=self.APP_ID)
         self._hover_tracker.start()
         Gtk.main()
 
     def stop(self):
         self._hover_tracker.stop()
+        self._menu_detector.stop()
         self._tooltip.stop()
         Gtk.main_quit()

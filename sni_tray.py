@@ -22,7 +22,9 @@ import dbus.service
 from dbus.mainloop.glib import DBusGMainLoop
 
 from menu_builder import build_gtk_menu
+from menu_open_detector import MenuOpenDetector
 from panel_hover import PanelHoverTracker
+from tray_log import tray_log
 from tray_popup import attach_tray_popup
 
 WATCHER_IFACE = "org.kde.StatusNotifierWatcher"
@@ -174,7 +176,12 @@ class SNITray:
         self._current_pil = active_image
         self._status_title = ""
         self._status_subtitle = ""
-        self._hover_tracker = PanelHoverTracker(lambda x=-1, y=-1: None, lambda: None)
+        self._hover_tracker = PanelHoverTracker(
+            lambda x=-1, y=-1: None,
+            lambda: None,
+            log=tray_log,
+        )
+        self._menu_detector = MenuOpenDetector(lambda: None, log=tray_log)
         attach_tray_popup(self)
         self._bus = None
         self._service_name = f"org.kde.StatusNotifierItem-{os.getpid()}-1"
@@ -217,21 +224,24 @@ class SNITray:
             print("SNI watcher registration failed:", exc)
 
     def start(self):
+        tray_log("Tray backend: native StatusNotifierItem (SNI)")
         DBusGMainLoop(set_as_default=True)
         self._bus = dbus.SessionBus()
-        self._menu = DbusmenuGtk.Menu.new('com.audio.device.switcher.menu', '/Menu')
-        self._menu_path = '/Menu'
+        self._menu = DbusmenuGtk.Menu.new("com.audio.device.switcher.menu", "/Menu")
+        self._menu_path = "/Menu"
         self._item = _StatusNotifierItem(self._bus, self.APP_ID, self._menu_path)
         self._item.set_popup_callback(self._show_popup)
         self._bus.request_name(self._service_name)
         self._register_with_watcher()
         self.set_icon(self._current_pil)
         self.set_menu()
+        self._menu_detector.start(bus=self._bus, known_paths=[self._menu_path])
         self._hover_tracker.start()
         Gtk.main()
 
     def stop(self):
         self._hover_tracker.stop()
+        self._menu_detector.stop()
         Gtk.main_quit()
 
 
